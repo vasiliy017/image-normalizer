@@ -1,7 +1,7 @@
 import os
 from PIL import Image
 
-def normalize_icon(input_path, output_path, target_size=(200, 200), padding_ratio=0.95, alpha_threshold=16):
+def normalize_icon(input_path, output_path, target_size=(200, 200), padding=10, alpha_threshold=16):
     # 1. Відкриваємо зображення
     img = Image.open(input_path).convert("RGBA")
 
@@ -17,11 +17,11 @@ def normalize_icon(input_path, output_path, target_size=(200, 200), padding_rati
     # Обрізаємо пусті поля навколо іконки
     cropped_img = img.crop(bbox)
 
-    # 3. Обчислюємо новий розмір для іконки з урахуванням відступів (padding)
+    # 3. Вписуємо іконку в полотно, зменшене на padding з кожного боку
     src_width, src_height = cropped_img.size
     scale_factor = min(
-        target_size[0] * padding_ratio / src_width,
-        target_size[1] * padding_ratio / src_height,
+        (target_size[0] - 2 * padding) / src_width,
+        (target_size[1] - 2 * padding) / src_height,
     )
     new_width = max(1, round(src_width * scale_factor))
     new_height = max(1, round(src_height * scale_factor))
@@ -69,7 +69,7 @@ if __name__ == "__main__":
                 input_path,
                 output_path,
                 target_size=(100, 100),
-                padding_ratio=1
+                padding=10
             )
             processed_count += 1
             print(f"✅ {filename}")
