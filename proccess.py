@@ -1,27 +1,31 @@
 import os
 from PIL import Image
 
-def normalize_icon(input_path, output_path, target_size=(200, 200), padding_ratio=0.95):
+def normalize_icon(input_path, output_path, target_size=(200, 200), padding_ratio=0.95, alpha_threshold=16):
     # 1. Відкриваємо зображення
     img = Image.open(input_path).convert("RGBA")
-    
-    # 2. Знаходимо обмежувальну рамку (bbox) видимих пікселів (не прозорих)
-    bbox = img.getbbox()
+
+    # 2. Знаходимо обмежувальну рамку (bbox) видимих пікселів (не прозорих).
+    # getbbox() рахує контентом навіть альфу=1, тому ледь помітний ореол
+    # навколо об'єкта роздував рамку до країв полотна — відсікаємо його порогом.
+    mask = img.getchannel("A").point(lambda p: 255 if p > alpha_threshold else 0)
+    bbox = mask.getbbox()
     if not bbox:
         # Якщо картинка повністю прозора, просто пропускаємо
-        return 
-    
+        return
+
     # Обрізаємо пусті поля навколо іконки
     cropped_img = img.crop(bbox)
-    
+
     # 3. Обчислюємо новий розмір для іконки з урахуванням відступів (padding)
-    max_side = max(cropped_img.size)
-    target_content_size = int(max(target_size) * padding_ratio)
-    
-    scale_factor = target_content_size / max_side
-    new_width = int(cropped_img.size[0] * scale_factor)
-    new_height = int(cropped_img.size[1] * scale_factor)
-    
+    src_width, src_height = cropped_img.size
+    scale_factor = min(
+        target_size[0] * padding_ratio / src_width,
+        target_size[1] * padding_ratio / src_height,
+    )
+    new_width = max(1, round(src_width * scale_factor))
+    new_height = max(1, round(src_height * scale_factor))
+
     # Змінюємо розмір самої іконки
     resized_img = cropped_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
     
@@ -64,7 +68,7 @@ if __name__ == "__main__":
             normalize_icon(
                 input_path,
                 output_path,
-                target_size=(200, 200),
+                target_size=(100, 100),
                 padding_ratio=1
             )
             processed_count += 1
